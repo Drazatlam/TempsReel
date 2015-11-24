@@ -7,9 +7,22 @@
 
 #include <GLFW/glfw3.h>
 #include <GL/gl.h>
+#include <glm/gtc/matrix_transform.hpp>
+#include <glm/mat4x4.hpp>
+
+int testColor=0;
+int testPos1=0;
+int testPos2=0;
+int cam=0;
+glm::mat4x4 projectionMat;
+glm::mat4x4 viewMat;
+
+GLuint buffer;
+float datas[]={-0.5,-0.5,0,0.5,-0.5,0,0.5,0.5,0,-0.5,0.5,0};
 
 void render(GLFWwindow*);
 void init();
+void testBuffer();
 
 #define glInfo(a) std::cout << #a << ": " << glGetString(a) << std::endl
 
@@ -184,8 +197,22 @@ void init()
 {
 	// Build our program and an empty VAO
 	gs.program = buildProgram("basic.vsl", "basic.fsl");
+	testBuffer();
+}
 
-	glCreateVertexArrays(1, &gs.vao);
+void testBuffer(){
+	glGenBuffers(1,&buffer);
+	glBindBuffer(GL_ARRAY_BUFFER,buffer);
+	glBufferData(GL_ARRAY_BUFFER,3*4*4,datas,GL_STATIC_DRAW);
+
+	glCreateVertexArrays(1,&gs.vao);
+	glBindVertexArray(gs.vao);
+	{
+		glBindBuffer(GL_ARRAY_BUFFER,buffer);
+		glVertexAttribPointer(1,3,GL_FLOAT,GL_FALSE,0,0);
+		glEnableVertexArrayAttrib(gs.vao,1);
+	}
+	glBindVertexArray(0);
 }
 
 void render(GLFWwindow* window)
@@ -194,12 +221,22 @@ void render(GLFWwindow* window)
 	glfwGetFramebufferSize(window, &width, &height);
 	glViewport(0, 0, width, height);
 
+	glClear(GL_COLOR_BUFFER_BIT);
+
 	glUseProgram(gs.program);
 	glBindVertexArray(gs.vao);
 
-	{
-		glDrawArrays(GL_TRIANGLE_FAN, 0, 4);
-	}
+	projectionMat= glm::perspective(45.0f,640.0f/480.0f,1.0f,200.0f);
+	viewMat=glm::lookAt(glm::vec3(cos(cam++/100.0),0,sin(cam/100.0)),glm::vec3(0,0,0),glm::vec3(0,1,0));
+	glm::mat4x4 mat=projectionMat*viewMat;
+
+	glProgramUniformMatrix4fv(gs.program,2,1,GL_FALSE,&mat[0][0]);
+
+	glProgramUniform1f(gs.program,1001,(sin((testColor++)/100.0)+1)/2.0);
+	glProgramUniform1f(gs.program,1002,(sin((testColor++)/80.0)+1)/2.0);
+	glProgramUniform1f(gs.program,1003,(sin((testColor++)/120.0)+1)/2.0);
+
+	glDrawArrays(GL_TRIANGLE_FAN, 0, 4);
 
 	glBindVertexArray(0);
 	glUseProgram(0);
