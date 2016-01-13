@@ -9,20 +9,24 @@
 #include <GL/gl.h>
 #include <glm/gtc/matrix_transform.hpp>
 #include <glm/mat4x4.hpp>
+#include "maillage.h"
 
 int testColor=0;
 int testPos1=0;
 int testPos2=0;
 int cam=0;
 glm::mat4x4 projectionMat;
+glm::mat4x4 lightMat;
 glm::mat4x4 viewMat;
 
 GLuint buffer;
 float datas[]={-0.5,-0.5,0,0.5,-0.5,0,0.5,0.5,0,-0.5,0.5,0};
+Maillage m;
 
 void render(GLFWwindow*);
 void init();
 void testBuffer();
+void bufferObj(Maillage m);
 
 #define glInfo(a) std::cout << #a << ": " << glGetString(a) << std::endl
 
@@ -191,14 +195,71 @@ struct
 {
 	GLuint program; // a shader
 	GLuint vao; // a vertex array object
+	GLuint depthTexture;
+	GLuint fbo;
 } gs;
 
 void init()
 {
 	// Build our program and an empty VAO
 	gs.program = buildProgram("basic.vsl", "basic.fsl");
-	testBuffer();
+
+	glm::vec3 min;
+	glm::vec3 max;
+	m.geometry(glm::vec3(0.f,0.f,0.f),"C:/Users/etu/Desktop/monkey.obj",min,max);
+
+	bufferObj(m);
+
+	glGenTextures(1,&gs.depthTexture);
+	glBindTexture(GL_TEXTURE_2D, gs.depthTexture);
+	glTexStorage2D(GL_TEXTURE_2D,1,GL_DEPTH_COMPONENT32F, 800, 800);
+
+
+	glGenFramebuffers(1, &gs.fbo);
+	glBindFramebuffer(GL_FRAMEBUFFER, gs.fbo);
+	glFramebufferTexture2D(GL_FRAMEBUFFER, GL_DEPTH_ATTACHMENT,GL_TEXTURE_2D,gs.depthTexture,0);
+
+	assert(glCheckFramebufferStatus(GL_FRAMEBUFFER) == GL_FRAMEBUFFER_COMPLETE);
+	glBindFramebuffer(GL_FRAMEBUFFER,0);
+
+	glActiveTexture(GL_TEXTURE0);
+	glBindTexture(GL_TEXTURE_2D, gs.depthTexture);
+	//testBuffer();
 }
+
+void bufferObj(Maillage m){
+	std::vector<float> points=m.points();
+	std::vector<float> normals=m.normals();
+
+	std::vector<float> all;
+	all.reserve(points.size()*2);
+	for(int i=0;i<points.size();i+=3){
+		all.push_back(points[i]);
+		all.push_back(points[i+1]);
+		all.push_back(points[i+2]);
+		all.push_back(normals[i]);
+		all.push_back(normals[i+1]);
+		all.push_back(normals[i+2]);
+	}
+
+	glGenBuffers(1,&buffer);
+	glBindBuffer(GL_ARRAY_BUFFER,buffer);
+
+
+	glBufferData(GL_ARRAY_BUFFER,all.size()*4,all.data(),GL_STATIC_DRAW);
+	std::cout<<"ok"<<std::endl;
+	glCreateVertexArrays(1,&gs.vao);
+	glBindVertexArray(gs.vao);
+	{
+		glBindBuffer(GL_ARRAY_BUFFER,buffer);
+		glVertexAttribPointer(1,3,GL_FLOAT,GL_FALSE,6*4,0);
+		glVertexAttribPointer(3,3,GL_FLOAT,GL_FALSE,6*4,(void*)(3*4));
+		glEnableVertexArrayAttrib(gs.vao,1);
+		glEnableVertexArrayAttrib(gs.vao,3);
+	}
+	glBindVertexArray(0);
+}
+
 
 void testBuffer(){
 	glGenBuffers(1,&buffer);
@@ -214,32 +275,54 @@ void testBuffer(){
 	}
 	glBindVertexArray(0);
 }
+void pass(GLuint buffer,int width,int height,glm::mat4x4 viewMat){
 
-void render(GLFWwindow* window)
-{
-	int width, height;
-	glfwGetFramebufferSize(window, &width, &height);
+	glBindFramebuffer(GL_FRAMEBUFFER,buffer);
 	glViewport(0, 0, width, height);
 
 	glClear(GL_COLOR_BUFFER_BIT);
+	glClear(GL_DEPTH_BUFFER_BIT);
 
 	glUseProgram(gs.program);
 	glBindVertexArray(gs.vao);
+	glEnable(GL_DEPTH_TEST);
 
 	projectionMat= glm::perspective(45.0f,640.0f/480.0f,1.0f,200.0f);
-	viewMat=glm::lookAt(glm::vec3(cos(cam++/100.0),0,sin(cam/100.0)),glm::vec3(0,0,0),glm::vec3(0,1,0));
+
 	glm::mat4x4 mat=projectionMat*viewMat;
 
 	glProgramUniformMatrix4fv(gs.program,2,1,GL_FALSE,&mat[0][0]);
 
-	glProgramUniform1f(gs.program,1001,(sin((testColor++)/100.0)+1)/2.0);
-	glProgramUniform1f(gs.program,1002,(sin((testColor++)/80.0)+1)/2.0);
-	glProgramUniform1f(gs.program,1003,(sin((testColor++)/120.0)+1)/2.0);
+	glProgramUniform3f(gs.program,10,0.5,-2,-2);
 
-	glDrawArrays(GL_TRIANGLE_FAN, 0, 4);
+	glDrawArrays(GL_TRIANGLES, 0, m.topo.size()*3);
+
+	//glDrawElements
 
 	glBindVertexArray(0);
 	glUseProgram(0);
+}
+void render(GLFWwindow* window)
+{
+	int width, height;
+	glfwGetFramebufferSize(window, &width, &height);
+
+	++cam;
+	viewMat=glm::lookAt(glm::vec3(cos(cam/100.0f)*5,-5,sin(cam/100.0f)*5),glm::vec3(0,0,0),glm::vec3(0,-1,0));
+
+	lightMat=glm::lookAt(glm::vec3(cos(cam/100.0f)*2.5,-2,-sin(cam/100.0f)*2.5),glm::vec3(0,0,0),glm::vec3(0,-1,0));
+
+
+	projectionMat= glm::perspective(45.0f,640.0f/480.0f,1.0f,200.0f);
+	glm::mat4x4 mat=projectionMat*lightMat;
+
+	glProgramUniformMatrix4fv(gs.program,8,1,GL_FALSE,&mat[0][0]);
+
+
+	pass(gs.fbo,800,800,lightMat);
+
+	pass(0,width,height,viewMat);
+
 
 
 

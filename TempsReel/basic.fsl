@@ -1,10 +1,39 @@
 #version 430
 
 out vec4 color_out;
-layout (location=1001) uniform float r;
-layout (location=1002) uniform float g;
-layout (location=1003) uniform float b;
+
+layout (location=10) uniform vec3 light;
+layout (binding=0) uniform sampler2D textureDepth;
+layout (location=2) uniform mat4 mat;
+layout (location=8) uniform mat4 matLight;
+
+in vec3 norm_out;
+in vec3 position_out;
 void main()
 {
-	color_out = vec4(r, g, b, 1);
+	vec3 pos=position_out;
+	vec3 dir=normalize(light-pos);
+
+	
+	vec4 posfin = mat*vec4(position_out,1);
+
+	vec4 posLight = matLight*vec4(position_out,1);
+	posLight/=posLight.w;
+	posLight+=vec4(1,1,1,0);
+	posLight/=vec4(2,2,2,1);
+
+	
+
+
+	vec4 depth = texture(textureDepth,posLight.xy);
+
+	float f=abs(dot(norm_out,dir));
+	float d=distance(light,pos);
+	float v=(1/(d*d))*f;
+
+	if(posLight.z>depth.z+0.01&&(posLight.x>0&&posLight.y>0&&posLight.x<1&&posLight.y<1))
+		color_out = vec4(pow(v,1/2.2)*0.2,0,0, 1);
+	else
+		color_out = vec4(pow(v,1/2.2),0,0, 1);
+	//color_out = vec4(depth);
 }
