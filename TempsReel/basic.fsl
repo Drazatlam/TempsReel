@@ -27,7 +27,7 @@ void main()
 
 	vec4 depth = texture(textureDepth,posLight.xy);
 
-	float f=abs(dot(norm_out,dir));
+	float f=max(0,dot(norm_out,dir));
 	float d=distance(light,pos);
 	float v=(1/(d*d))*f;
 

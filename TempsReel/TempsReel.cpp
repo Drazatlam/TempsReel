@@ -206,7 +206,7 @@ void init()
 
 	glm::vec3 min;
 	glm::vec3 max;
-	m.geometry(glm::vec3(0.f,0.f,0.f),"C:/Users/etu/Desktop/monkey.obj",min,max);
+	m.geometry(glm::vec3(0.f,0.f,0.f),"C:/Users/etu/Desktop/bestMonkey.obj",min,max);
 
 	bufferObj(m);
 
@@ -308,9 +308,13 @@ void render(GLFWwindow* window)
 	glfwGetFramebufferSize(window, &width, &height);
 
 	++cam;
-	viewMat=glm::lookAt(glm::vec3(cos(cam/100.0f)*5,-5,sin(cam/100.0f)*5),glm::vec3(0,0,0),glm::vec3(0,-1,0));
+	//viewMat=glm::lookAt(glm::vec3(cos(cam/100.0f)*5,-5,sin(cam/100.0f)*5),glm::vec3(0,0,0),glm::vec3(0,-1,0));
 
-	lightMat=glm::lookAt(glm::vec3(cos(cam/100.0f)*2.5,-2,-sin(cam/100.0f)*2.5),glm::vec3(0,0,0),glm::vec3(0,-1,0));
+	//lightMat=glm::lookAt(glm::vec3(cos(cam/100.0f)*2,0,-sin(cam/100.0f)*2),glm::vec3(0,0,0),glm::vec3(0,-1,0));
+
+	lightMat=glm::lookAt(glm::vec3(4*cos(cam/100.0f),-2.5*sin(cam/100.0f)-2.5,-5),glm::vec3(0,0,0),glm::vec3(0,-1,0));
+
+	viewMat=glm::lookAt(glm::vec3(0,-2,-12),glm::vec3(0,0,0),glm::vec3(0,-1,0));
 
 
 	projectionMat= glm::perspective(45.0f,640.0f/480.0f,1.0f,200.0f);
