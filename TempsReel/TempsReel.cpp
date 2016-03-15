@@ -206,7 +206,7 @@ void init()
 
 	glm::vec3 min;
 	glm::vec3 max;
-	m.geometry(glm::vec3(0.f,0.f,0.f),"C:/Users/etu/Desktop/monkey.obj",min,max);
+	m.geometry(glm::vec3(0.f,0.f,0.f),"monkey.obj",min,max);
 
 	bufferObj(m);
 
